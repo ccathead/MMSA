@@ -9,6 +9,7 @@ __all__ = ['MMDataLoader']
 
 logger = logging.getLogger('MMSA')
 
+# 数据集处理
 class MMDataset(Dataset):
     def __init__(self, args, mode='train'):
         self.mode = mode
@@ -30,17 +31,24 @@ class MMDataset(Dataset):
             # use deault feature file specified in config file
             with open(self.args['featurePath'], 'rb') as f:
                 data = pickle.load(f)
-        
+        """
+        text   = [N, Lt, Dt]
+        audio  = [N, La, Da]
+        vision = [N, Lv, Dv]
+        """
         if self.args.get('use_bert', None):
             self.text = data[self.mode]['text_bert'].astype(np.float32)
             self.args['feature_dims'][0] = 768
         else:
             self.text = data[self.mode]['text'].astype(np.float32)
             self.args['feature_dims'][0] = self.text.shape[2]
+
         self.audio = data[self.mode]['audio'].astype(np.float32)
         self.args['feature_dims'][1] = self.audio.shape[2]
+
         self.vision = data[self.mode]['vision'].astype(np.float32)
         self.args['feature_dims'][2] = self.vision.shape[2]
+
         self.raw_text = data[self.mode]['raw_text']
         self.ids = data[self.mode]['id']
 
@@ -104,6 +112,9 @@ class MMDataset(Dataset):
             self.vision_m, self.vision_length, self.vision_mask, self.vision_missing_mask = self.generate_m(self.vision, None, self.vision_lengths,
                                                                                         self.args.missing_rate[2], self.args.missing_seed[2], mode='vision')
 
+        # 对视频和音频特征进行归一化处理，确保它们的值在相同的范围内，便于模型训练
+        # 归一化后的视频和音频特征的维度为 (num_examples, 1, feature_dim)，而文本特征的维度为 (num_examples, seq_len, feature_dim)
+        # 而文本依然保留序列
         if self.args.get('need_normalized'):
             self.__normalize()
     
@@ -163,6 +174,7 @@ class MMDataset(Dataset):
         self.audio = do_truncate(self.audio, audio_length)
 
     def __normalize(self):
+        # (0,1,2)->(1,0,2) for vision and audio
         # (num_examples,max_len,feature_dim) -> (max_len, num_examples, feature_dim)
         self.vision = np.transpose(self.vision, (1, 0, 2))
         self.audio = np.transpose(self.audio, (1, 0, 2))
@@ -175,7 +187,7 @@ class MMDataset(Dataset):
         # remove possible NaN values
         self.vision[self.vision != self.vision] = 0
         self.audio[self.audio != self.audio] = 0
-
+        # 再次将视频和音频特征的维度调整为 (num_examples, 1, feature_dim)，以便后续处理
         self.vision = np.transpose(self.vision, (1, 0, 2))
         self.audio = np.transpose(self.audio, (1, 0, 2))
 

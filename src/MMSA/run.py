@@ -105,25 +105,31 @@ def MMSA_run(
     # Initialization
     model_name = model_name.lower()
     dataset_name = dataset_name.lower()
-    
+
+    # choose config file
     if config_file is not None:
         config_file = Path(config_file)
     else: # use default config files
+        # is_tune is True, use config_tune.json, otherwise use config_regression.json
         if is_tune:
             config_file = Path(__file__).parent / "config" / "config_tune.json"
         else:
             config_file = Path(__file__).parent / "config" / "config_regression.json"
     if not config_file.is_file():
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_file)
+    # 最优模型权重
     if model_save_dir is None: # use default model save dir
         model_save_dir = Path.home() / "MMSA" / "saved_models"
     Path(model_save_dir).mkdir(parents=True, exist_ok=True)
+    # 评价指标
     if res_save_dir is None: # use default result save dir
         res_save_dir = Path.home() / "MMSA" / "results"
     Path(res_save_dir).mkdir(parents=True, exist_ok=True)
+    # 训练日志
     if log_dir is None: # use default log save dir
         log_dir = Path.home() / "MMSA" / "logs"
     Path(log_dir).mkdir(parents=True, exist_ok=True)
+
     seeds = seeds if seeds != [] else [1111, 1112, 1113, 1114, 1115]
     logger = _set_logger(log_dir, model_name, dataset_name, verbose_level)
 
@@ -192,6 +198,7 @@ def MMSA_run(
         args = get_config_regression(model_name, dataset_name, config_file)
         args['model_save_path'] = Path(model_save_dir) / f"{args['model_name']}-{args['dataset_name']}.pth"
         args['device'] = assign_gpu(gpu_ids)
+        # 模型首先执行回归，输出一个标量值，范围在-3到3之间
         args['train_mode'] = 'regression' # backward compatibility. TODO: remove all train_mode in code
         args['custom_feature'] = custom_feature
         args['feature_T'] = feature_T
@@ -213,6 +220,8 @@ def MMSA_run(
         res_save_dir = Path(res_save_dir) / "normal"
         res_save_dir.mkdir(parents=True, exist_ok=True)
         model_results = []
+        # run with different seeds
+        
         for i, seed in enumerate(seeds):
             setup_seed(seed)
             args['cur_seed'] = i + 1
@@ -221,6 +230,7 @@ def MMSA_run(
             result = _run(args, num_workers, is_tune)
             logger.info(f"Result for seed {seed}: {result}")
             model_results.append(result)
+
         criterions = list(model_results[0].keys())
         # save result to csv
         csv_file = res_save_dir / f"{dataset_name}.csv"

@@ -13,6 +13,7 @@ logger = logging.getLogger('MMSA')
 class LF_DNN():
     def __init__(self, args):
         self.args = args
+        # loss function and metrics
         self.criterion = nn.L1Loss() if args.train_mode == 'regression' else nn.CrossEntropyLoss()
         self.metrics = MetricsTop(args.train_mode).getMetics(args.dataset_name)
 
@@ -38,10 +39,12 @@ class LF_DNN():
             train_loss = 0.0
             with tqdm(dataloader['train']) as td:
                 for batch_data in td:
+                    # 把数据移到GPU上
                     vision = batch_data['vision'].to(self.args.device)
                     audio = batch_data['audio'].to(self.args.device)
                     text = batch_data['text'].to(self.args.device)
                     labels = batch_data['labels']['M'].to(self.args.device)
+
                     if self.args.train_mode == 'classification':
                         labels = labels.view(-1).long()
                     else:

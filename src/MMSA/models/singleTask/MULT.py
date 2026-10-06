@@ -12,6 +12,7 @@ from ..subNets.transformers_encoder.transformer import TransformerEncoder
 
 __all__ = ['MULT']
 
+# 跨模态注意力
 class MULT(nn.Module):
     def __init__(self, args):
         super(MULT, self).__init__()
@@ -20,6 +21,7 @@ class MULT(nn.Module):
         self.use_bert = args.use_bert
         # Mult Model Initialization.
         dst_feature_dims, nheads = args.dst_feature_dim_nheads
+        # l, a, v = text, audio, video
         self.orig_d_l, self.orig_d_a, self.orig_d_v = args.feature_dims
         self.d_l = self.d_a = self.d_v = dst_feature_dims
         self.num_heads = nheads
@@ -96,17 +98,20 @@ class MULT(nn.Module):
         if self.use_bert:
             text = self.text_model(text)
         x_l = F.dropout(text.transpose(1, 2), p=self.text_dropout, training=self.training)
+        # exchange the second and third dimensions of audio and video tensors
         x_a = audio.transpose(1, 2)
         x_v = video.transpose(1, 2)
         # Project the textual/visual/audio features
         proj_x_l = x_l if self.orig_d_l == self.d_l else self.proj_l(x_l)
         proj_x_a = x_a if self.orig_d_a == self.d_a else self.proj_a(x_a)
         proj_x_v = x_v if self.orig_d_v == self.d_v else self.proj_v(x_v)
+        # reshape tensor dimensions according to the requirements of the requestion
         proj_x_a = proj_x_a.permute(2, 0, 1)
         proj_x_v = proj_x_v.permute(2, 0, 1)
         proj_x_l = proj_x_l.permute(2, 0, 1)
 
-        # (V,A) --> L
+        # (V,A) --> L 
+        # 融合视频和音频的文本表示
         h_l_with_as = self.trans_l_with_a(proj_x_l, proj_x_a, proj_x_a)    # Dimension (L, N, d_l)
         h_l_with_vs = self.trans_l_with_v(proj_x_l, proj_x_v, proj_x_v)    # Dimension (L, N, d_l)
         h_ls = torch.cat([h_l_with_as, h_l_with_vs], dim=2)
@@ -116,6 +121,7 @@ class MULT(nn.Module):
         last_h_l = last_hs = h_ls[-1]   # Take the last output for prediction
 
         # (L,V) --> A
+        # 融合文本和视频的音频表示
         h_a_with_ls = self.trans_a_with_l(proj_x_a, proj_x_l, proj_x_l)
         h_a_with_vs = self.trans_a_with_v(proj_x_a, proj_x_v, proj_x_v)
         h_as = torch.cat([h_a_with_ls, h_a_with_vs], dim=2)
@@ -125,6 +131,7 @@ class MULT(nn.Module):
         last_h_a = last_hs = h_as[-1]
         
         # (L,A) --> V
+        # 融合文本和音频的视频表示
         h_v_with_ls = self.trans_v_with_l(proj_x_v, proj_x_l, proj_x_l)
         h_v_with_as = self.trans_v_with_a(proj_x_v, proj_x_a, proj_x_a)
         h_vs = torch.cat([h_v_with_ls, h_v_with_as], dim=2)

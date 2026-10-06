@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 __all__ = ['EF_LSTM']
 
+# 早期融合模型
 class EF_LSTM(nn.Module):
     """
     early fusion using lstm
@@ -31,6 +32,7 @@ class EF_LSTM(nn.Module):
 
     def forward(self, text_x, audio_x, video_x):
         # early fusion (default: seq_l == seq_a == seq_v)
+        # concatenate the features of the three modalities along the last dimension
         x = torch.cat([text_x, audio_x, video_x], dim=-1)
 
         x = self.norm(x)

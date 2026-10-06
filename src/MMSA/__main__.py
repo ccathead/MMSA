@@ -10,7 +10,7 @@ def parse_args():
                                  'misa', 'mfm', 'mlf_dnn', 'mtfn', 'mlmf', 'self_mm', 'mmim','tfr_net','tetfn','cenet'])
     parser.add_argument('-d', '--dataset', type=str, default='sims',
                         choices=['sims', 'mosi', 'mosei', 'simsv2'], help='Name of dataset')
-    parser.add_argument('-c', '--config', type=str, default='',
+    parser.add_argument('-c', '--config', type=str, default=None,
                         help='Path to config file. If not specified, default config file will be used.')
     parser.add_argument('-t', '--tune', action='store_true',
                         help='Whether to tune hyper parameters. Default: False')
@@ -20,13 +20,15 @@ def parse_args():
                         help='Random seeds. Specify multiple times for multiple seeds. Default: [1111, 1112, 1113, 1114, 1115]')
     parser.add_argument('-n', '--num-workers', type=int, default=8,
                         help='Number of workers used to load data. Default: 4')
+    # verbose level: 0 for error, 1 for info, 2 for debug
+    # 运行日志
     parser.add_argument('-v', '--verbose', type=int, default=1,
                         help='Verbose level of stdout. 0 for error, 1 for info, 2 for debug. Default: 1')
-    parser.add_argument('--model-save-dir', type=str, default='',
+    parser.add_argument('--model-save-dir', type=str, default=None,
                         help='Path to save trained models. Default: "~/MMSA/saved_models"')
-    parser.add_argument('--res-save-dir', type=str, default='',
+    parser.add_argument('--res-save-dir', type=str, default=None,
                         help='Path to save csv results. Default: "~/MMSA/results"')
-    parser.add_argument('--log-dir', type=str, default='',
+    parser.add_argument('--log-dir', type=str, default=None,
                         help='Path to save log files. Default: "~/MMSA/logs"')
     parser.add_argument('-g', '--gpu-ids', action='append', default=[],
                         help='Specify which gpus to use. If an empty list is supplied, will automatically assign to the most memory-free gpu. \
@@ -48,6 +50,7 @@ if __name__ == '__main__':
         dataset_name=cmd_args.dataset,
         config_file=cmd_args.config,
         seeds=cmd_args.seeds,
+        # tune hyper parameters
         is_tune=cmd_args.tune,
         tune_times=cmd_args.tune_times,
         feature_T=cmd_args.feature_T,

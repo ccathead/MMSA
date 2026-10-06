@@ -10,7 +10,7 @@ from torch.nn.parameter import Parameter
 
 from ..subNets import SubNet, TextSubNet
 
-
+# 张量融合网络模型
 class TFN(nn.Module):
     '''
     Implements the Tensor Fusion Networks for multimodal sentiment analysis as is described in:
@@ -63,9 +63,13 @@ class TFN(nn.Module):
             video_x: tensor of shape (batch_size, video_in)
             text_x: tensor of shape (batch_size, sequence_len, text_in)
         '''
+        # squeeze: remove the dimension of size 1 from the shape of a tensor, e.g., (batch_size, 1, audio_in) -> (batch_size, audio_in)
+        # unsqueeze: add a dimension of size 1 to the shape of a tensor, e.g., (batch_size, audio_in) -> (batch_size, 1, audio_in)
+        # squeeze the audio and video features to remove the sequence dimension, since they are not sequential features
         audio_x = audio_x.squeeze(1)
         video_x = video_x.squeeze(1)
 
+        # get the features from the pre-fusion subnetworks
         audio_h = self.audio_subnet(audio_x)
         video_h = self.video_subnet(video_x)
         text_h = self.text_subnet(text_x)
@@ -73,6 +77,7 @@ class TFN(nn.Module):
 
         # next we perform "tensor fusion", which is essentially appending 1s to the tensors and take Kronecker product
         add_one = torch.ones(size=[batch_size, 1], requires_grad=False).type_as(audio_h).to(text_x.device)
+        # we append 1s to the features of each modality, so that the fusion tensor will contain unimodal, bimodal and trimodal interactions
         _audio_h = torch.cat((add_one, audio_h), dim=1)
         _video_h = torch.cat((add_one, video_h), dim=1)
         _text_h = torch.cat((add_one, text_h), dim=1)

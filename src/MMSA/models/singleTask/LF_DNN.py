@@ -11,6 +11,12 @@ from ..subNets import SubNet, TextSubNet
 
 __all__ = ['LF_DNN']
 
+# 后期特征融合模型
+"""
+先定义不同模态的字网络，然后将原始特征输入到各自的子网络中，得到各自的特征表示，然后将这些特征表示进行拼接，最后通过全连接层进行分类或回归。
+不要求三个模态具有相同的序列长度
+但拼接本身仍然没有复杂的跨模态交互机制
+"""
 class LF_DNN(nn.Module):
     """
     late fusion using DNN
@@ -40,6 +46,10 @@ class LF_DNN(nn.Module):
 
 
     def forward(self, text_x, audio_x, video_x):
+        """
+        audio：[B, 1, Da] → [B, Da]
+        video：[B, 1, Dv] → [B, Dv]
+        """
         audio_x = audio_x.squeeze(1)
         video_x = video_x.squeeze(1)
 

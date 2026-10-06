@@ -12,6 +12,7 @@ from pytorch_transformers import BertConfig
 class AMIO(nn.Module):
     def __init__(self, args):
         super(AMIO, self).__init__()
+        # model name map
         self.MODEL_MAP = {
             # single-task
             'tfn': TFN,
@@ -40,6 +41,7 @@ class AMIO(nn.Module):
         self.need_model_aligned = args.get('need_model_aligned', None)
         # simulating word-align network (for seq_len_T == seq_len_A == seq_len_V)
         if(self.need_model_aligned):
+            # initialize the alignment network defaultly using avg_pool, which is the most common way of aligning
             self.alignNet = AlignSubNet(args, 'avg_pool')
             if 'seq_lens' in args.keys():
                 args['seq_lens'] = self.alignNet.get_seq_len()
@@ -52,6 +54,8 @@ class AMIO(nn.Module):
             self.Model = lastModel(args)
 
     def forward(self, text_x, audio_x, video_x, *args, **kwargs):
+        # 如果模型要求显示对齐
         if(self.need_model_aligned):
+            # align the input modalities before feeding into the model
             text_x, audio_x, video_x = self.alignNet(text_x, audio_x, video_x)
         return self.Model(text_x, audio_x, video_x, *args, **kwargs)
